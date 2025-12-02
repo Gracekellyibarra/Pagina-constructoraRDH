@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Usuario</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .register-container {
+            max-width: 450px;
+            margin: 80px auto;
+            padding: 30px;
+            background: #0f172a;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px #000;
+            text-align: center;
+        }
+        .register-container h2 { color: #f59e0b; margin-bottom: 25px; }
+        .register-container input, .register-container select { margin-bottom: 15px; }
+        .register-container .btn { width: 100%; }
+        .back-link { display: block; margin-top: 15px; font-size: 14px; }
+        .message { margin-top: 15px; font-weight: 600; color: #f87171; }
+    </style>
+</head>
+<body class="bg-dark">
+    <div class="register-container">
+        <h2>Registro de Nuevo Usuario RDH</h2>
+
+        <form id="registerForm" class="form">
+
+            <input name="nombres" type="text" placeholder="Nombre Completo" required>
+
+            <input name="correo_corp" type="email" placeholder="Correo Corporativo" required>
+
+            <input name="password" type="password" placeholder="Contraseña (mín. 6 caracteres)" required>
+
+            <label style="text-align: left; display: block; margin-bottom: 5px;">Asignar Rol:</label>
+            <select name="id_rol" required style="width: 100%; padding: 12px 14px; border-radius: 12px;">
+                <option value="2">2 - Usuario Normal</option>
+                <option value="1">1 - Administrador de Sistema (Requiere Correo RDH)</option>
+            </select>
+
+            <button type="submit" class="btn btn--primary">Registrar Usuario</button>
+            <p id="message" class="message" hidden></p>
+        </form>
+
+        <p class="back-link">
+            <a href="login.html">← Volver al Inicio de Sesión</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            const messageEl = document.getElementById('message');
+
+            messageEl.hidden = false;
+            messageEl.style.color = '#f59e0b';
+            messageEl.textContent = 'Registrando...';
+
+            try {
+                // Validación del correo corporativo para administradores
+                if (data.id_rol === '1' && !data.correo_corp.endsWith('@rdhconstructora.com')) {
+                    messageEl.textContent = 'Error: El Administrador debe usar un correo corporativo de RDH.';
+                    messageEl.style.color = '#f87171';
+                    return;
+                }
+
+                const response = await fetch('/api/usuarios/registro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    messageEl.textContent = '✅ Usuario ' + result.usuario.nombres + ' registrado con éxito.';
+                    messageEl.style.color = '#22c55e';
+                    e.target.reset();
+                } 
+                else {
+                    messageEl.textContent = 'Error: ' + result.mensaje;
+                    messageEl.style.color = '#f87171';
+                }
+
+            } catch (error) {
+                messageEl.textContent = 'Error de conexión con el servidor.';
+                messageEl.style.color = '#f87171';
+            }
+        });
+    </script>
+</body>
+</html>

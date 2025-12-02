@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración • RDH</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-container { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 30px; }
+        .admin-panel { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #1e293b; font-weight: 700; color: var(--accent); }
+        tr:hover { background: #0f172a; }
+        .btn-small { padding: 6px 12px; font-size: 12px; margin: 0 4px; cursor: pointer; border: none; border-radius: 6px; }
+        .btn-edit { background: #3b82f6; color: white; }
+        .btn-delete { background: #ef4444; color: white; }
+        .btn-toggle { background: #8b5cf6; color: white; }
+        .form-group { margin-bottom: 15px; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #f1f5f9; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0007; z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        /* ✅ FONDO OSCURO PARA LOS MODALES */
+        .modal-content { background: #1e293b; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #334155; }
+        .modal-content h3 { color: var(--accent); margin-top: 0; }
+        .modal-close { float: right; cursor: pointer; font-size: 24px; color: #f1f5f9; }
+        .modal-close:hover { color: var(--accent); }
+    </style>
+</head>
+<body class="bg-dark">
+    <header class="hdr">
+        <div class="wrap hdr__row">
+            <div class="hdr__brand">
+                <a href="/" class="logo-link">
+                    <img src="img/logo_rhodes.png" class="logo" alt="RDH">
+                </a>
+            </div>
+            <nav class="hdr__nav">
+                <span id="hdr__user-name" class="hdr__user-name">Admin</span>
+                <button onclick="logout()" class="btn btn--primary">🚪 Cerrar Sesión</button>
+            </nav>
+        </div>
+    </header>
+
+    <section class="section">
+        <div class="wrap">
+            <h2 class="section__title">Panel de Administración</h2>
+            
+            <div class="admin-container">
+                <!-- PANEL DE USUARIOS -->
+                <div class="admin-panel">
+                    <h3>🧑‍💼 Gestión de Usuarios</h3>
+                    <button class="btn btn--primary" onclick="openUserModal()">➕ Nuevo Usuario</button>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usuariosTable"></tbody>
+                    </table>
+                </div>
+
+                <!-- PANEL DE SOLICITUDES -->
+                <div class="admin-panel">
+                    <h3>📋 Solicitudes de Clientes</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Correo</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="solicitudesTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODAL PARA CREAR/EDITAR USUARIO -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeUserModal()">&times;</span>
+            <h3 id="modalTitle">Nuevo Usuario</h3>
+            <form id="userForm">
+                <div class="form-group">
+                    <label>Nombres:</label>
+                    <input id="inputNombres" type="text" placeholder="Nombre completo" required>
+                </div>
+                <div class="form-group">
+                    <label>Correo Corporativo:</label>
+                    <input id="inputCorreo" type="email" placeholder="correo@empresa.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña (dejar vacío para mantener la actual):</label>
+                    <input id="inputPassword" type="password" placeholder="Nueva contraseña">
+                </div>
+                <div class="form-group">
+                    <label>Rol:</label>
+                    <select id="inputRol" required>
+                        <option value="1">Administrador</option>
+                        <option value="2">Vendedor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Activo:
+                        <input id="inputActivo" type="checkbox" checked>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn--primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PARA VER SOLICITUD -->
+    <div id="solicitudModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeSolicitudModal()">&times;</span>
+            <h3>Detalles de Solicitud</h3>
+            <div id="solicitudDetails"></div>
+            <div class="form-group">
+                <label>Estado:</label>
+                <select id="estadoSelect">
+                    <option value="pendiente">Pendiente</option>
+                    <option value="procede">Procede</option>
+                    <option value="no procede">No Procede</option>
+                </select>
+            </div>
+            <button onclick="actualizarSolicitud()" class="btn btn--primary">Actualizar Estado</button>
+        </div>
+    </div>
+
+    <script>
+        let usuarioEditando = null;
+        let solicitudEditando = null;
+
+        // ✅ VERIFICAR QUE SEA ADMIN
+        function checkAdmin() {
+            const id_rol = parseInt(localStorage.getItem('id_rol') || '0');
+            if (id_rol !== 1) {
+                console.error('❌ Acceso denegado. Solo administradores pueden acceder.');
+                window.location.href = '/index.html';
+            }
+            const nombres = localStorage.getItem('nombres') || 'Admin';
+            document.getElementById('hdr__user-name').textContent = nombres;
+        }
+
+        // ✅ CERRAR SESIÓN
+        function logout() {
+            localStorage.removeItem('usuario');
+            localStorage.removeItem('id_rol');
+            localStorage.removeItem('nombres');
+            window.location.href = '/index.html';
+        }
+
+        // ✅ CARGAR USUARIOS
+        async function cargarUsuarios() {
+            try {
+                const res = await fetch('/api/usuarios');
+                const usuarios = await res.json();
+                const tabla = document.getElementById('usuariosTable');
+                tabla.innerHTML = '';
+
+                usuarios.forEach(u => {
+                    const fila = document.createElement('tr');
+                    // ✅ CAMBIAR ROLES A "Admin" y "Cliente"
+                    const rolTexto = u.id_rol === 1 ? 'Admin' : 'Cliente';
+                    fila.innerHTML = `
+                        <td>${u.id_usuario}</td>
+                        <td>${u.nombres}</td>
+                        <td>${u.correo_corp}</td>
+                        <td>${rolTexto}</td>
+                        <td>${u.activo ? '✅ Activo' : '❌ Inactivo'}</td>
+                        <td>
+                            <button class="btn-small btn-edit" onclick="editarUsuario(${u.id_usuario}, '${u.nombres}', '${u.correo_corp}', ${u.id_rol}, ${u.activo})">Editar</button>
+                            <button class="btn-small btn-toggle" onclick="toggleUsuario(${u.id_usuario}, ${!u.activo})">Toggle</button>
+                        </td>
+                    `;
+                    tabla.appendChild(fila);
+                });
+                console.log('✅ Usuarios cargados:', usuarios);
+            } catch (error) {
+                console.error('❌ Error cargando usuarios:', error);
+            }
+        }
+
+        // ✅ CARGAR SOLICITUDES
+        async function cargarSolicitudes() {
+            try {
+                const res = await fetch('/api/solicitudes/all');
+                const solicitudes = await res.json();
+                const tabla = document.getElementById('solicitudesTable');
+                tabla.innerHTML = '';
+
+                solicitudes.forEach(s => {
+                    const fila = document.createElement('tr');
+                    // ✅ FIX: Formatear fecha correctamente
+                    console.log('Fecha original:', s.fecha_hora);
+                    const fecha = s.fecha_hora ? new Date(s.fecha_hora).toLocaleDateString('es-PE') : 'N/A';
+                    fila.innerHTML = `
+                        <td>${s.id_solicitud}</td>
+                        <td>${s.Cliente?.nombre || 'N/A'}</td>
+                        <td>${s.Cliente?.correo || 'N/A'}</td>
+                        <td><span style="color: ${s.estado === 'pendiente' ? '#f59e0b' : s.estado === 'procede' ? '#22c55e' : '#ef4444'}">${s.estado.toUpperCase()}</span></td>
+                        <td>${fecha}</td>
+                        <td>
+                            <button class="btn-small btn-edit" onclick="verSolicitud(${s.id_solicitud}, '${s.estado}', '${s.descripcion}')">Ver</button>
+                        </td>
+                    `;
+                    tabla.appendChild(fila);
+                });
+                console.log('✅ Solicitudes cargadas:', solicitudes);
+            } catch (error) {
+                console.error('❌ Error cargando solicitudes:', error);
+            }
+        }
+
+        // ✅ MODAL USUARIO
+        function openUserModal() {
+            usuarioEditando = null;
+            document.getElementById('modalTitle').textContent = 'Nuevo Usuario';
+            document.getElementById('userForm').reset();
+            document.getElementById('userModal').classList.add('active');
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('active');
+        }
+
+        function editarUsuario(id, nombres, correo, rol, activo) {
+            usuarioEditando = id;
+            document.getElementById('modalTitle').textContent = 'Editar Usuario';
+            document.getElementById('inputNombres').value = nombres;
+            document.getElementById('inputCorreo').value = correo;
+            document.getElementById('inputRol').value = rol;
+            document.getElementById('inputActivo').checked = activo;
+            document.getElementById('inputPassword').value = '';
+            document.getElementById('userModal').classList.add('active');
+            console.log('📝 Editando usuario ID:', id);
+        }
+
+        // ✅ GUARDAR/ACTUALIZAR USUARIO
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nombres = document.getElementById('inputNombres').value;
+            const correo_corp = document.getElementById('inputCorreo').value;
+            const password = document.getElementById('inputPassword').value;
+            const id_rol = parseInt(document.getElementById('inputRol').value);
+            const activo = document.getElementById('inputActivo').checked;
+
+            try {
+                if (usuarioEditando) {
+                    // ACTUALIZAR
+                    const res = await fetch(`/api/usuarios/${usuarioEditando}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nombres, correo_corp, id_rol, activo })
+                    });
+                    if (res.ok) {
+                        console.log('✅ Usuario actualizado ID:', usuarioEditando);
+                    } else {
+                        const data = await res.json();
+                        console.error('❌ Error al actualizar:', data.error);
+                    }
+                } else {
+                    // CREAR
+                    const res = await fetch('/api/usuarios/registro', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nombres, correo_corp, password, id_rol })
+                    });
+                    if (res.ok) {
+                        console.log('✅ Usuario creado:', nombres);
+                    } else {
+                        const data = await res.json();
+                        console.error('❌ Error al crear:', data.error);
+                    }
+                }
+                closeUserModal();
+                cargarUsuarios();
+            } catch (error) {
+                console.error('❌ Error en formulario:', error.message);
+            }
+        });
+
+        // ✅ TOGGLE USUARIO (activo/inactivo)
+        async function toggleUsuario(id, nuevoEstado) {
+            try {
+                const res = await fetch(`/api/usuarios/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activo: nuevoEstado })
+                });
+                if (res.ok) {
+                    console.log(`✅ Usuario ${id} ${nuevoEstado ? 'activado' : 'desactivado'}`);
+                    cargarUsuarios();
+                } else {
+                    const data = await res.json();
+                    console.error('❌ Error al cambiar estado:', data.error);
+                }
+            } catch (error) {
+                console.error('❌ Error en toggle:', error.message);
+            }
+        }
+
+        // ✅ ELIMINAR USUARIO
+
+        // ✅ VER SOLICITUD
+        function verSolicitud(id, estado, descripcion) {
+            solicitudEditando = id;
+            document.getElementById('estadoSelect').value = estado;
+            document.getElementById('solicitudDetails').innerHTML = `<p><strong>Descripción:</strong> ${descripcion}</p>`;
+            document.getElementById('solicitudModal').classList.add('active');
+            console.log('📋 Viendo solicitud ID:', id);
+        }
+
+        function closeSolicitudModal() {
+            document.getElementById('solicitudModal').classList.remove('active');
+        }
+
+        // ✅ ACTUALIZAR ESTADO DE SOLICITUD
+        function actualizarSolicitud() {
+            console.log('⚙️ Función de actualizar solicitud en desarrollo');
+        }
+
+        // ✅ INICIALIZAR PÁGINA
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAdmin();
+            cargarUsuarios();
+            cargarSolicitudes();
+        });
+    </script>
+</body>
+</html>

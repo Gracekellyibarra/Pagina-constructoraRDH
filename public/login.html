@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - RDH</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 30px;
+            background: #0f172a;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px #000;
+            text-align: center;
+        }
+        .login-container h2 { color: #f59e0b; margin-bottom: 25px; }
+        .login-container input { margin-bottom: 15px; }
+        .login-container .btn { width: 100%; }
+        .login-message { margin-top: 15px; font-weight: 600; color: #f87171; }
+        
+        /* Estilo para el enlace de registro */
+        .register-link {
+            display: block;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .register-link a {
+            color: #f59e0b;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="bg-dark">
+    <div class="login-container">
+        <h2>Acceso al Sistema RDH</h2>
+        <form id="loginForm" class="form">
+            <input id="email" name="correo_corp" type="email" placeholder="Correo Corporativo" required>
+            <input id="password" name="password" type="password" placeholder="Contraseña" required>
+            <button type="submit" class="btn btn--primary">Ingresar</button>
+            <p id="message" class="login-message" hidden>Credenciales incorrectas.</p>
+        </form>
+
+        <p class="register-link">
+            ¿No tienes cuenta? <a href="registro.html">¡Créate una!</a>
+        </p>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const correo_corp = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageEl = document.getElementById('message');
+            
+            try {
+                // 1️⃣ ENVÍA login al servidor
+                const res = await fetch('/api/usuarios/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correo_corp, password })
+                });
+
+                console.log('Respuesta del servidor:', res.status);
+                const data = await res.json();
+                console.log('Datos recibidos:', data);
+
+                if (res.ok) {
+                    // ✅ GUARDAR usuario, rol e id_rol (COMO EN calculadora.html)
+                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+                    localStorage.setItem('id_rol', data.usuario.id_rol);
+                    localStorage.setItem('nombres', data.usuario.nombres);
+                    
+                    console.log('✅ Usuario logueado:', data.usuario.nombres);
+
+                    // ✅ REDIRIGIR según el rol
+                    if (data.usuario.id_rol === 1) {
+                        // Admin → Panel de administración
+                        window.location.href = '/admin.html';
+                    } else if (data.usuario.id_rol === 2) {
+                        // Cliente → Cotizador
+                        window.location.href = '/calculadora.html';
+                    } else {
+                        // Por defecto → Index
+                        window.location.href = '/index.html';
+                    }
+
+                } else {
+                    // ❌ ERROR: Mostrar mensaje
+                    messageEl.textContent = data.error || 'Credenciales incorrectas.';
+                    messageEl.hidden = false;
+                    console.error('Error de login:', data.error);
+                }
+
+            } catch (error) {
+                messageEl.textContent = 'Error de conexión con el servidor.';
+                messageEl.hidden = false;
+                console.error('Error en fetch:', error);
+            }
+        });
+    </script>
+</body>
+</html>
